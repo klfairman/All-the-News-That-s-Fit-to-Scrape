@@ -24,7 +24,7 @@ app.get("/", function(req, res) {
 });
 
 // TODO: make two more routes
-axios.get("https://old.reddit.com/r/webdev/").then(function(response) {
+axios.get("https://laughingsquid.com/").then(function(response) {
 
   // Load the HTML into cheerio and save it to a variable
   // '$' becomes a shorthand for cheerio's selector commands, much like jQuery's '$'
