@@ -1,122 +1,163 @@
 // Dependencies
+
 var express = require("express");
-var mongojs = require("mongojs");
-// Require axios and cheerio. This makes the scraping possible
-var axios = require("axios");
+var method = require("method-override");
+var body = require("body-parser");
+var exphbs = require("express-handlebars");
+var mongoose = require("mongoose");
+var logger = require("morgan");
 var cheerio = require("cheerio");
+var request = require("request");
 
-// Initialize Express
-var app = express();
+// Mongoose
 
-// Database configuration
-var databaseUrl = "scraper";
-var collections = ["scrapedData"];
+var Note = require("./models/Note");
+var Article = require("./models/Article");
+var databaseUrl = 'mongodb://localhost/scrap';
 
-// Hook mongojs configuration to the db variable
-var db = mongojs(databaseUrl, collections);
+if (process.env.MONGODB_URI) {
+	mongoose.connect(process.env.MONGODB_URI);
+}
+else {
+	mongoose.connect(databaseUrl);
+};
+
+mongoose.Promise = Promise;
+var db = mongoose.connection;
+
 db.on("error", function(error) {
-  console.log("Database Error:", error);
+	console.log("Mongoose Error: ", error);
 });
 
-// Main route (simple Hello World Message)
-app.get("/", function(req, res) {
-  res.send("Hello world");
+db.once("open", function() {
+	console.log("Mongoose connection successful.");
 });
 
-// TODO: make two more routes
-axios.get("https://old.reddit.com/r/webdev/").then(function(response) {
 
-  // Load the HTML into cheerio and save it to a variable
-  // '$' becomes a shorthand for cheerio's selector commands, much like jQuery's '$'
-  var $ = cheerio.load(response.data);
+var app = express();
+var port = process.env.PORT || 3000;
 
-  // An empty array to save the data that we'll scrape
-  var results = [];
+// app set-ups
 
-  // With cheerio, find each p-tag with the "title" class
-  // (i: iterator. element: the current element)
-  $("p.headline").each(function(i, element) {
+app.use(logger("dev"));
+app.use(express.static("public"));
+app.use(body.urlencoded({extended: false}));
+app.use(method("_method"));
+app.engine("handlebars", exphbs({defaultLayout: "main"}));
+app.set("view engine", "handlebars");
 
-    // Save the text of the element in a "title" variable
-    var headline = $(element).text();
-
-    // In the currently selected element, look at its child elements (i.e., its a-tags),
-    // then save the values for any "href" attributes that the child elements may have
-    var link = $(element).children().attr("href");
-
-    // Save these results in an object that we'll push into the results array we defined earlier
-    let obj ={
-      headline: headline,
-      link: link,
-      URL: URL,
-    }
-    results.push(obj);
-
-    db.scrapedData.insert(obj)
-  });
-
-  // Log the results once you've looped through each of the elements found with cheerio
-  console.log(results);
-});
-// Route 1
-// =======
-app.get("/scrape", function(req, res) {
-  // Query: In our database, go to the animals collection, then "find" everything
-  axios.get("https://www.ted.com/").then(function(response) {
-
-  // Load the HTML into cheerio and save it to a variable
-  // '$' becomes a shorthand for cheerio's selector commands, much like jQuery's '$'
-  var $ = cheerio.load(response.data);
-
-  // An empty array to save the data that we'll scrape
-  var results = [];
-
-  // With cheerio, find each p-tag with the "title" class
-  // (i: iterator. element: the current element)
-  $("p.title").each(function(i, element) {
-
-    // Save the text of the element in a "title" variable
-    var headline = $(element).text();
-
-    // In the currently selected element, look at its child elements (i.e., its a-tags),
-    // then save the values for any "href" attributes that the child elements may have
-    var link = $(element).children().attr("href");
-
-    // Save these results in an object that we'll push into the results array we defined earlier
-    let obj ={
-      title: title,
-      link: link
-    }
-    results.push(obj);
-
-    db.scrapedData.insert(obj)
-  });
-
-  // Log the results once you've looped through each of the elements found with cheerio
-  console.log(results);
-
-  res.send();
-});
+app.listen(port, function() {
+	console.log("Listening on port " + port);
 })
-// This route will retrieve all of the data
-// from the scrapedData collection as a json (this will be populated
-// by the data you scrape using the next route)
 
+// Routes
 
-// Route 2
-// =======
-
-
-// When you visit this route, the server will
-// scrape data from the site of your choice, and save it to
-// MongoDB.
-// TIP: Think back to how you pushed website data
-// into an empty array in the last class. How do you
-// push it into a MongoDB collection instead?
-
-/* -/-/-/-/-/-/-/-/-/-/-/-/- */
-
-// Listen on port 3000
-app.listen(3000, function() {
-  console.log("App running on port 3000!");
+app.get("/", function(req, res) {
+	Article.find({}, null, {sort: {created: -1}}, function(err, data) {
+		if(data.length === 0) {
+			res.render("placeholder", {message: "There's nothing scraped yet. Please click \"Scrape For Newest Articles\" for fresh and delicious news."});
+		}
+		else{
+			res.render("index", {articles: data});
+		}
+	});
 });
+
+app.get("/scrape", function(req, res) {
+	request("https://www.nytimes.com/section/world", function(error, response, html) {
+		var $ = cheerio.load(html);
+		var result = {};
+		$("div.story-body").each(function(i, element) {
+			var link = $(element).find("a").attr("href");
+			var title = $(element).find("h2.headline").text().trim();
+			var summary = $(element).find("p.summary").text().trim();
+			var img = $(element).parent().find("figure.media").find("img").attr("src");
+			result.link = link;
+			result.title = title;
+			if (summary) {
+				result.summary = summary;
+			};
+			if (img) {
+				result.img = img;
+			}
+			else {
+				result.img = $(element).find(".wide-thumb").find("img").attr("src");
+			};
+			var entry = new Article(result);
+			Article.find({title: result.title}, function(err, data) {
+				if (data.length === 0) {
+					entry.save(function(err, data) {
+						if (err) throw err;
+					});
+				}
+			});
+		});
+		console.log("Scrape finished.");
+		res.redirect("/");
+	});
+});
+
+app.get("/saved", function(req, res) {
+	Article.find({issaved: true}, null, {sort: {created: -1}}, function(err, data) {
+		if(data.length === 0) {
+			res.render("placeholder", {message: "You have not saved any articles yet. Try to save some delicious news by simply clicking \"Save Article\"!"});
+		}
+		else {
+			res.render("saved", {saved: data});
+		}
+	});
+});
+
+app.get("/:id", function(req, res) {
+	Article.findById(req.params.id, function(err, data) {
+		res.json(data);
+	})
+})
+
+app.post("/search", function(req, res) {
+	console.log(req.body.search);
+	Article.find({$text: {$search: req.body.search, $caseSensitive: false}}, null, {sort: {created: -1}}, function(err, data) {
+		console.log(data);
+		if (data.length === 0) {
+			res.render("placeholder", {message: "Nothing has been found. Please try other keywords."});
+		}
+		else {
+			res.render("search", {search: data})
+		}
+	})
+});
+
+app.post("/save/:id", function(req, res) {
+	Article.findById(req.params.id, function(err, data) {
+		if (data.issaved) {
+			Article.findByIdAndUpdate(req.params.id, {$set: {issaved: false, status: "Save Article"}}, {new: true}, function(err, data) {
+				res.redirect("/");
+			});
+		}
+		else {
+			Article.findByIdAndUpdate(req.params.id, {$set: {issaved: true, status: "Saved"}}, {new: true}, function(err, data) {
+				res.redirect("/saved");
+			});
+		}
+	});
+});
+
+app.post("/note/:id", function(req, res) {
+	var note = new Note(req.body);
+	note.save(function(err, doc) {
+		if (err) throw err;
+		Article.findByIdAndUpdate(req.params.id, {$set: {"note": doc._id}}, {new: true}, function(err, newdoc) {
+			if (err) throw err;
+			else {
+				res.send(newdoc);
+			}
+		});
+	});
+});
+
+app.get("/note/:id", function(req, res) {
+	var id = req.params.id;
+	Article.findById(id).populate("note").exec(function(err, data) {
+		res.send(data.note);
+	})
+})

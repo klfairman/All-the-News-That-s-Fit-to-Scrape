@@ -1,28 +1,42 @@
-var mongoose = require ("mongoose");
-
+var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
-var headlineSchema = new Schema ({
-
-    title: {
-        type: String,
-        required: true
-
-    },
-    note:{
-        type: Schema.Types.ObjectID,
-        required: true
-    },
-    link: {
-        type: String,
-        required: true
-    },
-    date: {
-        type: String,
-        required: true
-    }
+var Articleschema = new Schema({
+	title: {
+		type: String,
+		required: true,
+	},
+	link: {
+		type: String,
+		required: true,
+	},
+	summary: {
+		type: String,
+		default: "Summary unavailable."
+	},
+	img: {
+		type: String,
+		// default: "/assets/images/unavailable.jpg"
+	},
+	issaved: {
+		type: Boolean,
+		default: false
+	},
+	status: {
+		type: String,
+		default: "Save Article"
+	},
+	created: {
+		type: Date,
+		default: Date.now
+	},
+	note: {
+		type: Schema.Types.ObjectId,
+		ref: "Note"
+	}
 });
 
-var Headline = mongoose.model("Headline", headlineSchema);
+Articleschema.index({title: "text"});
 
-module.exports = Headline;
+var Article  = mongoose.model("Article", Articleschema);
+module.exports = Article;
