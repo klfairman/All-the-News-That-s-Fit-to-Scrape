@@ -33,6 +33,18 @@ db.once("open", function() {
 	console.log("Mongoose connection successful.");
 });
 
+<<<<<<< HEAD
+=======
+// TODO: make two more routes
+axios.get("http://www.metalinjection.net/tag/progressive-metal").then(function(response) {
+
+  // Load the HTML into cheerio and save it to a variable
+  // '$' becomes a shorthand for cheerio's selector commands, much like jQuery's '$'
+  var $ = cheerio.load(response.data);
+
+  // An empty array to save the data that we'll scrape
+  var results = [];
+>>>>>>> 39452953c6fc0a196b1e9643304bdad87a8b5a3c
 
 var app = express();
 var port = process.env.PORT || 3000;
