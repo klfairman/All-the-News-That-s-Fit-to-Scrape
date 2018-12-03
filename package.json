@@ -1,29 +1,29 @@
 {
-  "name": "news",
+  "name": "scrapeandrate",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "Class project to utilize Cheerio, Mongo, Mongoose, and the Node Express suite.",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/klfairman/All-the-News-That-s-Fit-to-Scrape.git"
+    "url": "git+https://github.com/awvala/scrapeandrate.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/klfairman/All-the-News-That-s-Fit-to-Scrape/issues"
+    "url": "https://github.com/awvala/scrapeandrate/issues"
   },
-  "homepage": "https://github.com/klfairman/All-the-News-That-s-Fit-to-Scrape#readme",
+  "homepage": "https://github.com/awvala/scrapeandrate#readme",
   "dependencies": {
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "cheerio": "^1.0.0-rc.2",
-    "express": "^4.16.4",
+    "express": "^4.16.3",
     "express-handlebars": "^3.0.0",
-    "mongoose": "^5.3.11",
+    "mongojs": "^2.6.0",
+    "mongoose": "^5.2.13",
     "morgan": "^1.9.1",
     "request": "^2.88.0"
   }
